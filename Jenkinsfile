@@ -77,10 +77,13 @@ pipeline {
         // ── 5. DEPLOY ──────────────────────────────
 
         stage('Deploy') {
+            tools {
+                nodejs 'NodeJS'
+            }
             steps {
                 sh '''
                     npm i -g vercel
-                    vercel --prod --token ${VERCEL_TOKEN} --yes
+                    vercel --prod --token $VERCEL_TOKEN --yes
                 '''
             }
         }
