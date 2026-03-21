@@ -1,34 +1,22 @@
 pipeline {
     agent any
-
-    // ──────────────────────────────────────────────
     // VARIABLES DE ENTORNO
-    // Ajusta estos valores según tu infraestructura
-    // ──────────────────────────────────────────────
     environment {
         APP_NAME       = 'jenkins-demo'
         DOCKER_IMAGE   = "jenkins-demo:${env.BUILD_NUMBER}"
         CONTAINER_PORT = '8080'   // Puerto expuesto en el host
         NGINX_PORT     = '80'     // Puerto interno de Nginx
 
-        // Slack — crea una credencial "Secret text" con el Webhook URL
-        // SLACK_CHANNEL     = '#deployments'
-        // SLACK_CREDENTIALS = 'slack-webhook-url'
-
         // Email
         NOTIFY_EMAIL = 'agarridog1@miumg.edu.gt'   // <-- cambia esto
     }
 
-    // ──────────────────────────────────────────────
     // TRIGGERS
-    // ──────────────────────────────────────────────
     triggers {
         githubPush()   // Requiere plugin "GitHub" + webhook en el repo
     }
 
-    // ──────────────────────────────────────────────
     // OPCIONES GENERALES
-    // ──────────────────────────────────────────────
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
@@ -36,14 +24,11 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    // ──────────────────────────────────────────────
     // ETAPAS
-    // ──────────────────────────────────────────────
     stages {
 
         // ── 1. CHECKOUT ────────────────────────────
         stage('Checkout') {
-            when { branch 'main' }
             steps {
                 echo "📥 Clonando repositorio — rama: ${env.GIT_BRANCH} | commit: ${env.GIT_COMMIT.take(7)}"
                 checkout scm
@@ -52,7 +37,6 @@ pipeline {
 
         // ── 2. LINT ────────────────────────────────
         stage('Lint') {
-            when { branch 'main' }
             steps {
                 echo '🔍 Analizando HTML, CSS y JS...'
                 sh '''
@@ -112,7 +96,6 @@ pipeline {
 
         // ── 3. BUILD ───────────────────────────────
         stage('Build') {
-            when { branch 'main' }
             steps {
                 echo '🏗️  Generando artefacto y construyendo imagen Docker...'
 
@@ -152,7 +135,6 @@ pipeline {
 
         // ── 4. TEST ────────────────────────────────
         stage('Test') {
-            when { branch 'main' }
             steps {
                 echo '🧪 Smoke test del contenedor...'
                 sh """
@@ -181,7 +163,6 @@ pipeline {
 
         // ── 5. DEPLOY ──────────────────────────────
         stage('Deploy') {
-            when { branch 'main' }
             steps {
                 echo "🚀 Desplegando ${env.DOCKER_IMAGE}..."
                 sh """
@@ -225,17 +206,6 @@ pipeline {
         success {
             echo "✅ Build #${env.BUILD_NUMBER} exitoso"
 
-            // Notificación Slack (plugin: Slack Notification)
-//             slackSend(
-//                 channel: env.SLACK_CHANNEL,
-//                 color: 'good',
-//                 message: """✅ *Deploy exitoso* — `${env.APP_NAME}`
-// • *Build:* #${env.BUILD_NUMBER}
-// • *Rama:* ${env.GIT_BRANCH}
-// • *Commit:* ${env.GIT_COMMIT.take(7)}
-// • *URL:* ${env.BUILD_URL}"""
-//             )
-
             // Notificación Email (plugin: Email Extension)
             emailext(
                 subject: "✅ [Jenkins] ${env.APP_NAME} — Build #${env.BUILD_NUMBER} EXITOSO",
@@ -260,17 +230,6 @@ pipeline {
             // Limpiar contenedor de test si quedó colgado
             sh "docker stop ${env.APP_NAME}-test 2>/dev/null || true"
             sh "docker rm   ${env.APP_NAME}-test 2>/dev/null || true"
-
-            // Notificación Slack
-//             slackSend(
-//                 channel: env.SLACK_CHANNEL,
-//                 color: 'danger',
-//                 message: """❌ *Build FALLIDO* — `${env.APP_NAME}`
-// • *Build:* #${env.BUILD_NUMBER}
-// • *Rama:* ${env.GIT_BRANCH}
-// • *Commit:* ${env.GIT_COMMIT.take(7)}
-// • *Logs:* ${env.BUILD_URL}console"""
-//             )
 
             // Notificación Email
             emailext(
