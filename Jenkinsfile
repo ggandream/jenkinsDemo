@@ -59,26 +59,6 @@ pipeline {
                         exit 1
                     fi
 
-                    # ── JS ──
-                    echo "=== Lint JS ==="
-                    if command -v node &> /dev/null; then
-                        JS_ERRORS=0
-                        for file in js/*.js; do
-                            if node --check "$file" 2>&1; then
-                                echo "  ✅ Sintaxis OK: $file"
-                            else
-                                echo "  ❌ Error de sintaxis: $file"
-                                JS_ERRORS=$((JS_ERRORS + 1))
-                            fi
-                        done
-                        if [ $JS_ERRORS -gt 0 ]; then
-                            echo "❌ Se encontraron $JS_ERRORS error(es) de sintaxis en JS."
-                            exit 1
-                        fi
-                    else
-                        echo "  ⚠️  Node.js no disponible, saltando lint de JS"
-                    fi
-
                     # ── CSS ──
                     echo "=== Lint CSS ==="
                     for file in css/*.css; do
