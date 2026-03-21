@@ -96,12 +96,12 @@ pipeline {
                     if [ ! -f Dockerfile ]; then
                         echo "📄 Dockerfile no encontrado, generando uno automáticamente..."
                         cat > Dockerfile << EOF
-                                FROM nginx:alpine
-                                LABEL maintainer="jenkinsDemo"
-                                COPY dist/ /usr/share/nginx/html/
-                                EXPOSE 80
-                                CMD ["nginx", "-g", "daemon off;"]
-                                EOF
+FROM nginx:alpine
+LABEL maintainer="jenkinsDemo"
+COPY dist/ /usr/share/nginx/html/
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+EOF
                     fi
                     echo "--- Dockerfile usado ---"
                     cat Dockerfile
