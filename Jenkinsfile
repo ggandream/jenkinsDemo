@@ -6,7 +6,7 @@ pipeline {
         DOCKER_IMAGE   = "jenkins-demo:${env.BUILD_NUMBER}"
         CONTAINER_PORT = '8080'   // Puerto expuesto en el host
         NGINX_PORT     = '80'     // Puerto interno de Nginx
-
+        VERCEL_TOKEN = credentials('VERCEL_TOKEN')
         // Email
         NOTIFY_EMAIL = 'agarridog1@miumg.edu.gt'   // <-- cambia esto
     }
@@ -74,105 +74,17 @@ pipeline {
             }
         }
 
-        // ── 3. BUILD ───────────────────────────────
-        stage('Build') {
-            steps {
-                echo '🏗️  Generando artefacto y construyendo imagen Docker...'
-
-                // Preparar carpeta dist/
-                sh '''
-                    rm -rf dist && mkdir -p dist
-                    cp -r *.html dist/
-                    [ -d css ]    && cp -r css    dist/
-                    [ -d js ]     && cp -r js     dist/
-                    [ -d images ] && cp -r images dist/
-                    [ -d fonts ]  && cp -r fonts  dist/
-                    echo "--- Contenido de dist/ ---"
-                    ls -lh dist/
-                '''
-
-                // Generar Dockerfile si no existe en el repo
-                sh '''
-                    if [ ! -f Dockerfile ]; then
-                        echo "📄 Dockerfile no encontrado, generando uno automáticamente..."
-                        cat > Dockerfile << EOF
-FROM nginx:alpine
-LABEL maintainer="jenkinsDemo"
-COPY dist/ /usr/share/nginx/html/
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-EOF
-                    fi
-                    echo "--- Dockerfile usado ---"
-                    cat Dockerfile
-                '''
-
-                // Construir imagen Docker
-                sh "docker build -t ${env.DOCKER_IMAGE} ."
-                echo "✅ Imagen construida: ${env.DOCKER_IMAGE}"
-            }
-        }
-
-        // ── 4. TEST ────────────────────────────────
-        stage('Test') {
-            steps {
-                echo '🧪 Smoke test del contenedor...'
-                sh """
-                    # Levantar contenedor temporal en puerto 9090
-                    docker run -d --name ${env.APP_NAME}-test \
-                        -p 9090:80 \
-                        ${env.DOCKER_IMAGE}
-
-                    sleep 3
-
-                    # Verificar que responde HTTP 200
-                    STATUS=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:9090)
-                    echo "HTTP Status: \$STATUS"
-
-                    docker stop ${env.APP_NAME}-test
-                    docker rm   ${env.APP_NAME}-test
-
-                    if [ "\$STATUS" != "200" ]; then
-                        echo "❌ Smoke test fallido — respondió HTTP \$STATUS"
-                        exit 1
-                    fi
-                    echo "✅ Smoke test OK"
-                """
-            }
-        }
-
         // ── 5. DEPLOY ──────────────────────────────
+
         stage('Deploy') {
             steps {
-                echo "🚀 Desplegando ${env.DOCKER_IMAGE}..."
-                sh """
-                    # Reemplazar contenedor anterior
-                    docker stop ${env.APP_NAME} 2>/dev/null || true
-                    docker rm   ${env.APP_NAME} 2>/dev/null || true
-
-                    # Levantar contenedor de producción
-                    docker run -d \
-                        --name ${env.APP_NAME} \
-                        -p ${env.CONTAINER_PORT}:${env.NGINX_PORT} \
-                        --restart unless-stopped \
-                        ${env.DOCKER_IMAGE}
-
-                    sleep 2
-                    docker ps --filter "name=${env.APP_NAME}" --format "ID: {{.ID}} | Estado: {{.Status}}"
-                    echo "✅ Sitio disponible en http://localhost:${env.CONTAINER_PORT}"
-                """
-
-                // Limpiar imágenes viejas
-                sh """
-                    docker images jenkins-demo --format "{{.Tag}}" | \
-                        grep -v "${env.BUILD_NUMBER}" | \
-                        xargs -I{} docker rmi jenkins-demo:{} 2>/dev/null || true
-                    echo "🧹 Imágenes anteriores eliminadas"
-                """
+                sh '''
+                    npm i -g vercel
+                    vercel --prod --token ${env.VERCEL_TOKEN} --yes
+                '''
             }
         }
 
-    } // fin stages
 
     // ──────────────────────────────────────────────
     // POST — Notificaciones y limpieza
