@@ -80,7 +80,7 @@ pipeline {
             steps {
                 sh '''
                     npm i -g vercel
-                    vercel --prod --token ${env.VERCEL_TOKEN} --yes
+                    vercel --prod --token ${VERCEL_TOKEN} --yes
                 '''
             }
         }
