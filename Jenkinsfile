@@ -3,9 +3,6 @@ pipeline {
     // VARIABLES DE ENTORNO
     environment {
         APP_NAME       = 'jenkins-demo'
-        DOCKER_IMAGE   = "jenkins-demo:${env.BUILD_NUMBER}"
-        CONTAINER_PORT = '8080'   // Puerto expuesto en el host
-        NGINX_PORT     = '80'     // Puerto interno de Nginx
         VERCEL_TOKEN = credentials('VERCEL_TOKEN')
         // Email
         NOTIFY_EMAIL = 'agarridog1@miumg.edu.gt'   // <-- cambia esto
@@ -38,7 +35,7 @@ pipeline {
         // ── 2. LINT ────────────────────────────────
         stage('Lint') {
             steps {
-                echo '🔍 Analizando HTML, CSS y JS...'
+                echo 'LINT - Analizando HTML, CSS y JS...'
                 sh '''
                     # ── HTML ──
                     echo "=== Lint HTML ==="
@@ -89,10 +86,7 @@ pipeline {
         }
     }
 
-
-    // ──────────────────────────────────────────────
-    // POST — Notificaciones y limpieza
-    // ──────────────────────────────────────────────
+    // POST — Notificaciones
     post {
         always {
             sh 'rm -rf dist/ 2>/dev/null || true'
@@ -122,10 +116,6 @@ pipeline {
 
         failure {
             echo "❌ Build #${env.BUILD_NUMBER} fallido"
-
-            // Limpiar contenedor de test si quedó colgado
-            sh "docker stop ${env.APP_NAME}-test 2>/dev/null || true"
-            sh "docker rm   ${env.APP_NAME}-test 2>/dev/null || true"
 
             // Notificación Email
             emailext(
