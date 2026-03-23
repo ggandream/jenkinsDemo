@@ -6,11 +6,6 @@ pipeline {
         VERCEL_TOKEN = credentials('VERCEL_TOKEN')
     }
 
-    // TRIGGERS
-    triggers {
-        githubPush()
-    }
-
     // OPCIONES GENERALES
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
