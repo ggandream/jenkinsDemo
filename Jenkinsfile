@@ -4,13 +4,11 @@ pipeline {
     environment {
         APP_NAME       = 'jenkins-demo'
         VERCEL_TOKEN = credentials('VERCEL_TOKEN')
-        // Email
-        NOTIFY_EMAIL = 'agarridog1@miumg.edu.gt'   // <-- cambia esto
     }
 
     // TRIGGERS
     triggers {
-        githubPush()   // Requiere plugin "GitHub" + webhook en el repo
+        githubPush()
     }
 
     // OPCIONES GENERALES
@@ -24,7 +22,7 @@ pipeline {
     // ETAPAS
     stages {
 
-        // ── 1. CHECKOUT ────────────────────────────
+        // CHECKOUT
         stage('Checkout') {
             steps {
                 echo "📥 Clonando repositorio — rama: ${env.GIT_BRANCH} | commit: ${env.GIT_COMMIT.take(7)}"
@@ -32,10 +30,10 @@ pipeline {
             }
         }
 
-        // ── 2. LINT ────────────────────────────────
+        // LINT
         stage('Lint') {
             steps {
-                echo 'LINT - Analizando HTML, CSS y JS...'
+                echo 'Analizando HTML y CSS...'
                 sh '''
                     # ── HTML ──
                     echo "=== Lint HTML ==="
@@ -66,18 +64,19 @@ pipeline {
                         fi
                     done
 
-                    echo "✅ Lint completado sin errores críticos"
+                    echo "✅ Lint completado sin errores"
                 '''
             }
         }
 
-        // ── 5. DEPLOY ──────────────────────────────
+        // DEPLOY
 
         stage('Deploy') {
             tools {
                 nodejs 'NodeJS'
             }
             steps {
+                echo "🚀 Desplegando a Vercel..."
                 sh '''
                     npm i -g vercel
                     vercel --prod --token $VERCEL_TOKEN --yes
@@ -86,53 +85,18 @@ pipeline {
         }
     }
 
-    // POST — Notificaciones
+    // POST
     post {
         always {
-            sh 'rm -rf dist/ 2>/dev/null || true'
             cleanWs()
         }
 
         success {
             echo "✅ Build #${env.BUILD_NUMBER} exitoso"
-
-            // Notificación Email (plugin: Email Extension)
-            emailext(
-                subject: "✅ [Jenkins] ${env.APP_NAME} — Build #${env.BUILD_NUMBER} EXITOSO",
-                body: """
-                    <h2 style="color:#28a745">✅ Deploy Exitoso</h2>
-                    <table>
-                        <tr><td><b>Proyecto:</b></td><td>${env.APP_NAME}</td></tr>
-                        <tr><td><b>Build:</b></td><td>#${env.BUILD_NUMBER}</td></tr>
-                        <tr><td><b>Rama:</b></td><td>${env.GIT_BRANCH}</td></tr>
-                        <tr><td><b>Commit:</b></td><td>${env.GIT_COMMIT.take(7)}</td></tr>
-                    </table>
-                    <br/><a href="${env.BUILD_URL}">Ver detalles del build →</a>
-                """,
-                mimeType: 'text/html',
-                to: env.NOTIFY_EMAIL
-            )
         }
 
         failure {
             echo "❌ Build #${env.BUILD_NUMBER} fallido"
-
-            // Notificación Email
-            emailext(
-                subject: "❌ [Jenkins] ${env.APP_NAME} — Build #${env.BUILD_NUMBER} FALLIDO",
-                body: """
-                    <h2 style="color:#dc3545">❌ Build Fallido</h2>
-                    <table>
-                        <tr><td><b>Proyecto:</b></td><td>${env.APP_NAME}</td></tr>
-                        <tr><td><b>Build:</b></td><td>#${env.BUILD_NUMBER}</td></tr>
-                        <tr><td><b>Rama:</b></td><td>${env.GIT_BRANCH}</td></tr>
-                        <tr><td><b>Commit:</b></td><td>${env.GIT_COMMIT.take(7)}</td></tr>
-                    </table>
-                    <br/><a href="${env.BUILD_URL}console">Ver logs del error →</a>
-                """,
-                mimeType: 'text/html',
-                to: env.NOTIFY_EMAIL
-            )
         }
     }
 
