@@ -28,7 +28,7 @@ pipeline {
         // LINT
         stage('Lint') {
             steps {
-                echo 'Analizando HTML y CSS...'
+                echo 'Analizando HTML y CSS'
                 sh '''
                     # ── HTML ──
                     echo "=== Lint HTML ==="
